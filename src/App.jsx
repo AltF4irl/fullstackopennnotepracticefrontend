@@ -1,19 +1,22 @@
-import {useState, useEffect} from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Note from './components/Note'
 import noteService from './services/notes'
 import Notification from './components/Notification'
 import Footer from './components/Footer'
 import loginService from './services/login'
+import LoginForm from './components/LoginForm'
+import Toggelable from './components/Toggelable'
+import NoteForm from './components/NoteForm'
 
 const App = () => {
 
   const [notes, setNotes] = useState([])
-  const [newNote, setNewNote] = useState('')
   const [showAll, setShowAll] = useState(true)
   const [errorMessage, setErrorMessage] = useState([])
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [user, setUser] = useState(null)
+  const noteFormRef = useRef()
 
   useEffect(() => {
     noteService
@@ -34,22 +37,13 @@ const App = () => {
   }, [])
 
   const eventHandler = {
-    addNoteHandler: (e) => {
-      e.preventDefault()
-      const noteObject = {
-        content: newNote,
-        important: Math.random() < 0.5
-      }
-
+    createNote: (noteObject) => {
       noteService
         .create(noteObject)
         .then(returnedNote => {
           setNotes(notes.concat(returnedNote))
-          setNewNote('')
         })
-    },
-    noteChangeHandler: (e) =>  {
-      setNewNote(e.target.value)
+        noteFormRef.current.toggleVisibility()
     },
     showImportantClickHandler: () => {
       setShowAll(!showAll)
@@ -101,45 +95,45 @@ const App = () => {
           setErrorMessage([])
         }, 5000)
       }
+    },
+    usernameChangeHandler: ({target}) => {
+      setUsername(target.value)
+    },
+    passwordChnageHandler: ({target}) => {
+      setPassword(target.value)
     }
   }
-  const {addNoteHandler, noteChangeHandler, showImportantClickHandler, importantNoteClickHandler, loginHandler} = eventHandler
+  const {
+    showImportantClickHandler, 
+    importantNoteClickHandler, 
+    loginHandler,
+    usernameChangeHandler,
+    passwordChnageHandler,
+    createNote
+  } = eventHandler
 
   const notesToShow = showAll ? notes : notes.filter(note => note.important)
 
-  const loginForm = () => (
-    <form onSubmit={loginHandler}>
-      <h2>Login</h2>
-      <div>
-        Username
-        <input 
-          type='text'
-          value={username}
-          name='Username'
-          onChange={({ target }) => setUsername(target.value)}
+  const loginForm = () => {
+    return (
+      <Toggelable buttonLabel='Login'>
+        <LoginForm 
+          username = {username}
+          password = {password}
+          usernameChangeHandler = {usernameChangeHandler}
+          passwordChnageHandler = {passwordChnageHandler}
+          loginHandler = {loginHandler}
         />
-      </div>
-      <div>
-        Password
-        <input 
-          type='password'
-          value={password}
-          name='Password'
-          onChange={({ target }) => setPassword(target.value)}
-        />
-        <button type='submit'>Login</button>
-      </div>
-    </form>
-  )
+      </Toggelable>
+    )
+  }
 
   const noteForm = () => (
-    <form onSubmit={addNoteHandler}>
-        <input 
-        value={newNote} 
-        onChange={noteChangeHandler}
-        />
-        <button type="submit">Save</button>
-    </form>
+    <Toggelable buttonLabel='Create a New Note' ref={noteFormRef}>
+      <NoteForm 
+        createNote = {createNote}
+      />
+    </Toggelable>
   )
 
   return (
@@ -158,7 +152,7 @@ const App = () => {
       }
 
       <div>
-        <button onClick={showImportantClickHandler}>
+        <button onClick = {showImportantClickHandler}>
           Show {showAll ? 'Important' : 'all'}
         </button>
       </div>
